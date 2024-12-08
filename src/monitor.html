@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .stats {
+            margin-top: 10px;
+        }
+        .stat {
+            margin: 10px 0;
+        }
+    .error {
+        margin: 10px 0;
+        color: red;
+    }
+    </style>
+</head>
+<body>
+    <h1>Real-time Server Statistics</h1>
+    <div class="error" id="error"></div>
+    <div class="stats" id="stats"></div>
+    <script>
+        const server_url = 'wss://' + location.host + location.pathname.replace('monitor', 'ws');
+        const statsDiv = document.getElementById('stats');
+        const errorDiv = document.getElementById('error');
+        const ws = new WebSocket(server_url);
+
+        ws.onconnect = () => {
+            statsDiv.innerHTML = `<div class="stat">Connected</div>`;
+        };
+
+        ws.onerror = (e) => {
+            errorDiv.innerHTML = `<div class="stat" style="color:red;">Error: ${e.message}</div>`;
+        };
+
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            console.log('message', message);
+
+	    const messageType = message[0];
+            if (messageType === 'stats') {
+                updateStats(message[1]);
+            } else {
+                errorDiv.innerHTML = `<div class="stat" style="color:red;">Error: ${message}</div>`;
+            }
+        };
+
+        ws.onclose = () => {
+            statsDiv.innerHTML = `<div class="stat" style="color:red;">Connection closed</div>`;
+        };
+
+        function getStats() {
+            ws.send('stats');
+        }
+
+        function updateStats(stats) {
+            statsDiv.innerHTML = `
+                <div class="stat"><strong>CPU Usage:</strong> ${stats.cpu}%</div>
+                <div class="stat"><strong>Memory Usage:</strong> 
+                    ${((stats.memory.used / stats.memory.total) * 100).toFixed(2)}% 
+                    (${(stats.memory.used / 1e9).toFixed(2)} GB / ${(stats.memory.total / 1e9).toFixed(2)} GB)
+                </div>
+                <div class="stat"><strong>Disk Usage:</strong> 
+                    ${stats.disk.percent}% 
+                    (${(stats.disk.used / 1e9).toFixed(2)} GB / ${(stats.disk.total / 1e9).toFixed(2)} GB)
+                </div>
+                <div class="stat"><strong>Load Average:</strong> 
+                    1m: ${stats.load_avg[0].toFixed(1)}, 5m: ${stats.load_avg[1].toFixed(1)}, 15m: ${stats.load_avg[2].toFixed(1)}
+                </div>
+            `;
+        }
+
+        // Get stats every second
+        setInterval(getStats, 1000);
+    </script>
+</body>
+</html>
