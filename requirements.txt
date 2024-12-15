@@ -2,3 +2,5 @@ asyncio
 aiohttp
 websockets
 psutil
+aiohttp_session
+cryptography
