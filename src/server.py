@@ -18,6 +18,12 @@ async def check_auth(request):
 
 async def login(request):
     """Handle login requests."""
+    # If already authenticated, redirect to monitor
+    if await check_auth(request):
+        return web.Response(
+            status=web.HTTPFound.status_code, headers={"Location": "/monitor"}
+        )
+
     if request.method == "GET":
         path = os.path.join(BASE_DIR, "login.html")
         return web.FileResponse(path)
@@ -97,6 +103,20 @@ async def send_stats(request):
     return ws
 
 
+async def handle_root(request):
+    """
+    Handle root path requests.
+    Redirects to monitor if authenticated, login if not.
+    """
+    if await check_auth(request):
+        return web.Response(
+            status=web.HTTPFound.status_code, headers={"Location": "/monitor"}
+        )
+    return web.Response(
+        status=web.HTTPFound.status_code, headers={"Location": "/login"}
+    )
+
+
 def init_app():
     """Initialize the application with session handling."""
     app = web.Application()
@@ -112,6 +132,7 @@ def init_app():
     # Add routes
     app.add_routes(
         [
+            web.get("/", handle_root),
             web.get("/login", login),
             web.post("/login", login),
             web.get("/logout", logout),
