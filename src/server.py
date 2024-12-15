@@ -31,16 +31,21 @@ async def login(request):
             session = await get_session(request)
             session["authenticated"] = True
             session["username"] = username
-            return web.Response(status=302, headers={"Location": "/monitor"})
-
-        return web.Response(status=401, text="Invalid credentials")
+            return web.Response(
+                status=web.HTTPFound.status_code, headers={"Location": "/monitor"}
+            )
+        return web.Response(
+            status=web.HTTPUnauthorized.status_code, text="Invalid credentials"
+        )
 
 
 async def logout(request):
     """Handle logout requests."""
     session = await get_session(request)
     session.invalidate()
-    return web.Response(status=302, headers={"Location": "/login"})
+    return web.Response(
+        status=web.HTTPFound.status_code, headers={"Location": "/login"}
+    )
 
 
 async def hello(request):
@@ -51,7 +56,9 @@ async def hello(request):
 async def monitor(request):
     """Serve the monitor page with authentication check."""
     if not await check_auth(request):
-        return web.Response(status=302, headers={"Location": "/login"})
+        return web.Response(
+            status=web.HTTPFound.status_code, headers={"Location": "/login"}
+        )
     path = os.path.join(BASE_DIR, "monitor.html")
     return web.FileResponse(path)
 
@@ -70,7 +77,7 @@ async def get_system_stats():
 async def send_stats(request):
     """Send system stats to WebSocket client."""
     if not await check_auth(request):
-        return web.WebSocketResponse(status=401)
+        return web.WebSocketResponse(status=web.HTTPUnauthorized.status_code)
 
     print("Client connected")
     ws = web.WebSocketResponse()
@@ -129,9 +136,9 @@ def run():
     """Start WebSocket server."""
     ssl_context = create_ssl_context()
     app = init_app()
-    web.run_app(app, port=8765, ssl_context=ssl_context)
+    web.run_app(app, port=DEFAULT_PORT, ssl_context=ssl_context)
 
 
 if __name__ == "__main__":
-    print("Server started at wss://localhost:8765")
+    print(f"Server started at wss://localhost:{DEFAULT_PORT}")
     run()
