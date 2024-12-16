@@ -62,6 +62,7 @@
         function updateStats(stats) {
             statsDiv.innerHTML = `
                 <div class="stat"><strong>CPU Usage:</strong> ${stats.cpu}%</div>
+                <div class="stat"><strong>Process List:<br></strong>${stats.ps}</div> 
                 <div class="stat"><strong>Memory Usage:</strong> 
                     ${((stats.memory.used / stats.memory.total) * 100).toFixed(2)}% 
                     (${(stats.memory.used / 1e9).toFixed(2)} GB / ${(stats.memory.total / 1e9).toFixed(2)} GB)

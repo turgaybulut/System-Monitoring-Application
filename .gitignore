@@ -2,3 +2,4 @@ cert/localhost*
 bin/
 lib/
 pyvenv.cfg
+commands.py

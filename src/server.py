@@ -3,6 +3,8 @@ import json
 import pathlib
 import ssl
 
+import subprocess #I'm gonna need this to fetch processes.
+
 import psutil
 from aiohttp import web
 
@@ -17,14 +19,28 @@ async def monitor(request):
     print("Serving {path}".format(path=path))
     return web.FileResponse(path)
 
+def get_processes():
+    provess_result = subprocess.run("ps", stdout=subprocess.PIPE) #This provides too much info about the command
+    output = provess_result.stdout #this is the output we are interested in.
+    output_in_lines = output.splitlines() #yet, this is in bytes...
 
+    nice_result = ""
+    for line in output_in_lines:
+        line = str(line) #because life is terrible
+        line = line[2:]  #because there was an initial "b'" which I dont really understand ¯\_(ツ)_/¯
+        nice_result += line + "<br>"
+
+    return nice_result
 async def get_system_stats():
-    """Collect system statistics."""
+    """Collect system statistics.
+        I can simply add stuff I want here I guess..
+    """
     stats = {
         "cpu": psutil.cpu_percent(interval=1),
         "memory": psutil.virtual_memory()._asdict(),
         "disk": psutil.disk_usage("/")._asdict(),
         "load_avg": psutil.getloadavg(),
+        "ps": get_processes(),
     }
     return stats
 
