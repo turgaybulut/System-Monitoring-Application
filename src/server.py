@@ -1,12 +1,58 @@
 import asyncio
 import json
-import pathlib
 import ssl
-
 import subprocess #I'm gonna need this to fetch processes.
-
 import psutil
+import base64
 from aiohttp import web
+from aiohttp_session import setup, get_session
+from aiohttp_session.cookie_storage import EncryptedCookieStorage
+from cryptography import fernet
+from config import *
+
+
+async def check_auth(request):
+    """Check if user is authenticated."""
+    session = await get_session(request)
+    return session.get("authenticated", False)
+
+
+async def login(request):
+    """Handle login requests."""
+    # If already authenticated, redirect to monitor
+    if await check_auth(request):
+        return web.Response(
+            status=web.HTTPFound.status_code, headers={"Location": "/monitor"}
+        )
+
+    if request.method == "GET":
+        path = os.path.join(BASE_DIR, "login.html")
+        return web.FileResponse(path)
+
+    if request.method == "POST":
+        data = await request.post()
+        username = data.get("username")
+        password = data.get("password")
+
+        if username == DEFAULT_USERNAME and password == DEFAULT_PASSWORD:
+            session = await get_session(request)
+            session["authenticated"] = True
+            session["username"] = username
+            return web.Response(
+                status=web.HTTPFound.status_code, headers={"Location": "/monitor"}
+            )
+        return web.Response(
+            status=web.HTTPUnauthorized.status_code, text="Invalid credentials"
+        )
+
+
+async def logout(request):
+    """Handle logout requests."""
+    session = await get_session(request)
+    session.invalidate()
+    return web.Response(
+        status=web.HTTPFound.status_code, headers={"Location": "/login"}
+    )
 
 
 async def hello(request):
@@ -15,8 +61,12 @@ async def hello(request):
 
 
 async def monitor(request):
-    path = pathlib.Path(__file__).parents[0].joinpath("monitor.html")
-    print("Serving {path}".format(path=path))
+    """Serve the monitor page with authentication check."""
+    if not await check_auth(request):
+        return web.Response(
+            status=web.HTTPFound.status_code, headers={"Location": "/login"}
+        )
+    path = os.path.join(BASE_DIR, "monitor.html")
     return web.FileResponse(path)
 
 def command_output_in_lines(command):#have command be a String
@@ -81,6 +131,9 @@ async def get_system_stats():
 
 async def send_stats(request):
     """Send system stats to WebSocket client."""
+    if not await check_auth(request):
+        return web.WebSocketResponse(status=web.HTTPUnauthorized.status_code)
+
     print("Client connected")
     ws = web.WebSocketResponse()
     await ws.prepare(request)
@@ -99,11 +152,52 @@ async def send_stats(request):
     return ws
 
 
+async def handle_root(request):
+    """
+    Handle root path requests.
+    Redirects to monitor if authenticated, login if not.
+    """
+    if await check_auth(request):
+        return web.Response(
+            status=web.HTTPFound.status_code, headers={"Location": "/monitor"}
+        )
+    return web.Response(
+        status=web.HTTPFound.status_code, headers={"Location": "/login"}
+    )
+
+
+def init_app():
+    """Initialize the application with session handling."""
+    app = web.Application()
+
+    # Setup session handling
+    fernet_key = fernet.Fernet.generate_key()
+    secret_key = base64.urlsafe_b64decode(fernet_key)
+    storage = EncryptedCookieStorage(
+        secret_key=secret_key, cookie_name=SESSION_COOKIE_NAME, max_age=SESSION_EXPIRY
+    )
+    setup(app, storage)
+
+    # Add routes
+    app.add_routes(
+        [
+            web.get("/", handle_root),
+            web.get("/login", login),
+            web.post("/login", login),
+            web.get("/logout", logout),
+            web.get("/ws", send_stats),
+            web.get("/monitor", monitor),
+        ]
+    )
+
+    return app
+
+
 def create_ssl_context():
     """Create SSL context for secure WebSocket connection."""
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    cert_file = pathlib.Path(__file__).parents[1].joinpath("cert/localhost.crt")
-    key_file = pathlib.Path(__file__).parents[1].joinpath("cert/localhost.key")
+    cert_file = os.path.join(CERT_DIR, "localhost.crt")
+    key_file = os.path.join(CERT_DIR, "localhost.key")
     ssl_context.load_cert_chain(cert_file, key_file)
     return ssl_context
 
@@ -111,17 +205,10 @@ def create_ssl_context():
 def run():
     """Start WebSocket server."""
     ssl_context = create_ssl_context()
-    app = web.Application()
-    app.add_routes(
-        [
-            web.get("/ws", send_stats),
-            web.get("/monitor", monitor),
-            web.get("/hello", hello),
-        ]
-    )
-    web.run_app(app, port=8765, ssl_context=ssl_context)
+    app = init_app()
+    web.run_app(app, port=DEFAULT_PORT, ssl_context=ssl_context)
 
 
 if __name__ == "__main__":
-    print("Server started at wss://localhost:8765")
+    print(f"Server started at wss://localhost:{DEFAULT_PORT}")
     run()
