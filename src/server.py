@@ -19,18 +19,47 @@ async def monitor(request):
     print("Serving {path}".format(path=path))
     return web.FileResponse(path)
 
-def get_processes():
-    provess_result = subprocess.run("ps", stdout=subprocess.PIPE) #This provides too much info about the command
-    output = provess_result.stdout #this is the output we are interested in.
-    output_in_lines = output.splitlines() #yet, this is in bytes...
-
-    nice_result = ""
+def command_output_in_lines(command):#have command be a String
+    result = subprocess.run(command, shell=True, stdout=subprocess.PIPE)
+    output = result.stdout
+    output_in_lines= output.splitlines()
+    nice_output = ""
     for line in output_in_lines:
-        line = str(line) #because life is terrible
-        line = line[2:]  #because there was an initial "b'" which I dont really understand ¯\_(ツ)_/¯
-        nice_result += line + "<br>"
+        line = str(line)
+        line = line[2:-1]#because there was an initial "b'" and a final "'" which I dont really understand ¯\_(ツ)_/¯ 
+        nice_output += line + "<br>"
+    return nice_output
 
-    return nice_result
+def get_users():
+    return command_output_in_lines("who")
+
+def get_processes():
+    return command_output_in_lines("ps")
+
+def get_uptime():
+    return command_output_in_lines("uptime")
+
+def get_last_n_logins(n):
+    n = str(n) #just to be sure.
+    arguments = "last -n" +n 
+    return command_output_in_lines(arguments)
+
+def get_last_n_system_log(n):
+    n = str(n)
+    # arguments = "tail -"+n+" 50 /var/log/system.log" #THIS FUNCTION NEEDS ATTENTION
+    arguments = "log show --predicate \"eventType == logEvent\" --info --last 50m | tail -n "+n
+
+    return command_output_in_lines(arguments)
+
+def get_process_summary():
+    arguments_ps = "ps -eo state | sort | uniq -c"   
+    argument_sum = "ps aux | wc -l"
+    ps_in_lines = command_output_in_lines(arguments_ps)
+    sum_in_lines = command_output_in_lines(argument_sum)
+    result = ps_in_lines + "\n\nTotal number of processes:  " + sum_in_lines
+    return result
+
+
 async def get_system_stats():
     """Collect system statistics.
         I can simply add stuff I want here I guess..
@@ -41,6 +70,11 @@ async def get_system_stats():
         "disk": psutil.disk_usage("/")._asdict(),
         "load_avg": psutil.getloadavg(),
         "ps": get_processes(),
+        "users":get_users(),
+        "uptime":get_uptime(),
+        "n_logins":get_last_n_logins(10), #if we want to add an input function for this.
+        "ps_summary":get_process_summary(),
+        "n_sys_logs":get_last_n_system_log(50),
     }
     return stats
 
