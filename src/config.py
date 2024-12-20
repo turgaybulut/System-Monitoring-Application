@@ -16,3 +16,7 @@ SESSION_EXPIRY = 3600  # 1 hour in seconds
 # Path configurations
 BASE_DIR = Path(__file__).parent
 CERT_DIR = os.path.join(BASE_DIR.parent, "cert")
+
+# Monitor configuration
+LAST_LOGINS_COUNT = 10
+SYSTEM_LOG_LINES = 50

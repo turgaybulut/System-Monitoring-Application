@@ -4,150 +4,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Real-time server monitoring dashboard">
     <title>Server Monitor</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            background-color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .header h1 {
-            margin: 0;
-            color: #333;
-        }
-
-        .logout-btn {
-            padding: 8px 16px;
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.2s;
-        }
-
-        .logout-btn:hover {
-            background-color: #c82333;
-        }
-
-        .stats {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .stat {
-            margin: 10px 0;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .stat:last-child {
-            border-bottom: none;
-        }
-
-        .error {
-            margin: 10px 0;
-            padding: 10px;
-            color: #dc3545;
-            background-color: #f8d7da;
-            border-radius: 4px;
-            display: none;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/monitor.css">
 </head>
 
 <body>
-    <div class="header">
-        <h1>Real-time Server Statistics</h1>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-    </div>
-    <div class="error" id="error"></div>
-    <div class="stats" id="stats"></div>
-    <script>
-        const server_url = 'wss://' + location.host + location.pathname.replace('monitor', 'ws');
-        const statsDiv = document.getElementById('stats');
-        const errorDiv = document.getElementById('error');
-        const ws = new WebSocket(server_url);
+    <header class="header">
+        <h1>Server Monitor</h1>
+        <button class="logout-btn" onclick="logout()" aria-label="Logout">
+            Logout
+        </button>
+    </header>
 
-        ws.onconnect = () => {
-            statsDiv.innerHTML = `<div class="stat">Connected</div>`;
-        };
+    <div id="error" class="error" role="alert" aria-live="polite"></div>
 
-        ws.onerror = (e) => {
-            errorDiv.innerHTML = `<div class="stat" style="color:red;">Error: ${e.message}</div>`;
-        };
-
-        ws.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            console.log('message', message);
-
-            const messageType = message[0];
-            if (messageType === 'stats') {
-                updateStats(message[1]);
-            } else {
-                errorDiv.innerHTML = `<div class="stat" style="color:red;">Error: ${message}</div>`;
-            }
-        };
-
-        ws.onclose = () => {
-            statsDiv.innerHTML = `<div class="stat" style="color:red;">Connection closed</div>`;
-        };
-
-        function getStats() {
-            ws.send('stats');
-        }
-
-        function updateStats(stats) {
-            statsDiv.innerHTML = `
-                <div class="stat"><strong>CPU Usage:</strong> ${stats.cpu}%</div>
-                <div class="stat"><strong>Process List:<br></strong>${stats.ps}</div>
-                <div class="stat"><strong>Logged Users:<br></strong>${stats.users}</div> 
-                <div class="stat"><strong>Uptime:<br></strong>${stats.uptime}</div> 
-                <div class="stat"><strong>Last 10 logins:<br></strong>${stats.n_logins}</div> 
-                <div class="stat"><strong>Process Summary:<br></strong>${stats.ps_summary}</div> 
-                <div class="stat"><strong>Last 50 System Logs:<br></strong>${stats.n_sys_logs}</div> 
-                <div class="stat"><strong>Memory Usage:</strong> 
-                    ${((stats.memory.used / stats.memory.total) * 100).toFixed(2)}% 
-                    (${(stats.memory.used / 1e9).toFixed(2)} GB / ${(stats.memory.total / 1e9).toFixed(2)} GB)
+    <main class="dashboard">
+        <div class="stats-container">
+            <!-- System Overview -->
+            <section class="stats-card" id="system-stats" aria-label="System Overview">
+                <div class="card-content">
+                    <div class="section-header">
+                        <h2>System Overview</h2>
+                    </div>
+                    <div class="stats-content">Loading system statistics...</div>
                 </div>
-                <div class="stat"><strong>Disk Usage:</strong> 
-                    ${stats.disk.percent}% 
-                    (${(stats.disk.used / 1e9).toFixed(2)} GB / ${(stats.disk.total / 1e9).toFixed(2)} GB)
+            </section>
+
+            <!-- Process Information -->
+            <section class="stats-card" id="process-stats" aria-label="Process Information">
+                <div class="card-content">
+                    <div class="section-header">
+                        <h2>Process Information</h2>
+                    </div>
+                    <div class="stats-content">Loading process information...</div>
                 </div>
-                <div class="stat"><strong>Load Average:</strong> 
-                    1m: ${stats.load_avg[0].toFixed(1)}, 5m: ${stats.load_avg[1].toFixed(1)}, 15m: ${stats.load_avg[2].toFixed(1)}
+            </section>
+
+            <!-- User Information -->
+            <section class="stats-card" id="user-stats" aria-label="User Information">
+                <div class="section-header">
+                    <h2>User Information</h2>
                 </div>
-            `;
-        }
+                <div class="card-content">
+                    <div class="stats-content">Loading user information...</div>
+                </div>
+            </section>
 
-        function logout() {
-            // Close WebSocket connection before logout
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.close();
-            }
+            <!-- System Logs -->
+            <section class="stats-card" id="log-stats" aria-label="System Logs">
+                <div class="section-header">
+                    <h2>System Logs</h2>
+                    <button class="refresh-btn" onclick="window.monitorApp.refreshLogStats()">
+                        Refresh
+                    </button>
+                </div>
+                <div class="card-content">
+                    <div class="log-container">
+                        <div class="log-entries">Loading system logs...</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
 
-            // Redirect to logout endpoint
-            window.location.href = '/logout';
-        }
-
-        // Get stats every second
-        setInterval(getStats, 1000);
-    </script>
+    <script src="/static/js/monitor.js"></script>
 </body>
 
 </html>
