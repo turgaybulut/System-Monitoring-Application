@@ -30,10 +30,6 @@ RUN mkdir -p /host/sys
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV MONITOR_USERNAME=admin
-ENV MONITOR_PASSWORD=admin
-ENV HOST_PROC=/host/proc
-ENV HOST_SYS=/host/sys
 
 # Set the working directory to where server.py is located
 WORKDIR /app/src
