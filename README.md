@@ -79,6 +79,12 @@ PrettyTop is a web-based system monitoring application that provides real-time i
      EXPOSED_PORT=your_user_id
      ```
 
+    **Default Credentials:**
+    - Username: `admin`
+    - Password: `admin`
+    - Monitor Port: `8765`
+    - Exposed Port: `1031`
+
 4. Build and run with Docker compose:
 
    ```bash
@@ -89,7 +95,7 @@ PrettyTop is a web-based system monitoring application that provides real-time i
 
 1. Access the dashboard:
 
-   ```text
+   ```plaintext
    https://cs395.org/<your_user_id>/monitor
    ```
 
