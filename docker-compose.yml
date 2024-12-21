@@ -1,15 +1,20 @@
 services:
   monitor:
     build: .
-    container_name: system-monitoring-application
+    container_name: ${CONTAINER_NAME}
     ports:
-      - "1031:8765"
+      - "${EXPOSED_PORT:-1031}:${MONITOR_PORT:-8765}"
+    env_file:
+      - .env
     environment:
-      - MONITOR_USERNAME=admin
-      - MONITOR_PASSWORD=admin
+      - MONITOR_USERNAME=${MONITOR_USERNAME:-admin}
+      - MONITOR_PASSWORD=${MONITOR_PASSWORD:-admin}
+      - MONITOR_PORT=${MONITOR_PORT:-8765}
+      - HOST_PROC=${HOST_PROC}
+      - HOST_SYS=${HOST_SYS}
     volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
+      - /proc:${HOST_PROC}:ro
+      - /sys:${HOST_SYS}:ro
       - /var/log:/var/log:ro
       - /var/run/utmp:/var/run/utmp:ro
       - /etc/passwd:/etc/passwd:ro
