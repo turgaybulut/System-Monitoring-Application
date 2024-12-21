@@ -148,6 +148,10 @@ System-Monitoring-Application/
 - [**Turgay Bulut**](https://github.com/turgaybulut)
 - [**Emin Şahin Mektepli**](https://github.com/Sahin-Mektepli)
 
+## GitHub Repository
+
+[System-Monitoring-Application](https://github.com/turgaybulut/System-Monitoring-Application)
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
