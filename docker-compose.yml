@@ -1,0 +1,24 @@
+services:
+  monitor:
+    build: .
+    container_name: system-monitoring-application
+    ports:
+      - "1031:8765"
+    environment:
+      - MONITOR_USERNAME=admin
+      - MONITOR_PASSWORD=admin
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/log:/var/log:ro
+      - /var/run/utmp:/var/run/utmp:ro
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - ./cert:/app/cert:ro
+    pid: "host"
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor=unconfined
+    restart: unless-stopped

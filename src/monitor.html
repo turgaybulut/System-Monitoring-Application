@@ -1,74 +1,1029 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Real-time server monitoring dashboard">
-    <title>Server Monitor</title>
-    <link rel="stylesheet" href="/static/css/monitor.css">
+    <title>System Monitor Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status-badge {
+            @apply px-2.5 py-1 text-xs font-medium rounded-full min-w-[80px] inline-flex items-center justify-center;
+        }
+
+        .status-badge.running {
+            @apply bg-green-100 text-green-800;
+        }
+
+        .status-badge.sleeping {
+            @apply bg-blue-100 text-blue-800;
+        }
+
+        .status-badge.stopped {
+            @apply bg-yellow-100 text-yellow-800;
+        }
+
+        .status-badge.zombie {
+            @apply bg-red-100 text-red-800;
+        }
+
+        .status-badge.dead {
+            @apply bg-gray-100 text-gray-800;
+        }
+
+        .status-badge.waking {
+            @apply bg-indigo-100 text-indigo-800;
+        }
+
+        .status-badge.idle {
+            @apply bg-teal-100 text-teal-800;
+        }
+
+        .status-badge.locked {
+            @apply bg-rose-100 text-rose-800;
+        }
+
+        .status-badge.waiting {
+            @apply bg-amber-100 text-amber-800;
+        }
+
+        .status-badge.unknown {
+            @apply bg-gray-100 text-gray-600;
+        }
+
+        .grid-card {
+            @apply bg-white rounded-xl shadow-sm border border-gray-100 transition-all duration-200 hover:shadow-md;
+        }
+
+        .stat-value {
+            @apply text-2xl font-semibold text-gray-900;
+        }
+
+        .stat-label {
+            @apply text-sm font-medium text-gray-500;
+        }
+
+        .table-header {
+            @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider;
+        }
+
+        .table-cell {
+            @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+        }
+
+        .blur-backdrop {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+    </style>
 </head>
 
-<body>
-    <header class="header">
-        <h1>Server Monitor</h1>
-        <button class="logout-btn" onclick="logout()" aria-label="Logout">
-            Logout
-        </button>
-    </header>
-
-    <div id="error" class="error" role="alert" aria-live="polite"></div>
-
-    <main class="dashboard">
-        <div class="stats-container">
-            <!-- System Overview -->
-            <section class="stats-card" id="system-stats" aria-label="System Overview">
-                <div class="card-content">
-                    <div class="section-header">
-                        <h2>System Overview</h2>
-                    </div>
-                    <div class="stats-content">Loading system statistics...</div>
-                </div>
-            </section>
-
-            <!-- Process Information -->
-            <section class="stats-card" id="process-stats" aria-label="Process Information">
-                <div class="card-content">
-                    <div class="section-header">
-                        <h2>Process Information</h2>
-                    </div>
-                    <div class="stats-content">Loading process information...</div>
-                </div>
-            </section>
-
-            <!-- User Information -->
-            <section class="stats-card" id="user-stats" aria-label="User Information">
-                <div class="section-header">
-                    <h2>User Information</h2>
-                </div>
-                <div class="card-content">
-                    <div class="stats-content">Loading user information...</div>
-                </div>
-            </section>
-
-            <!-- System Logs -->
-            <section class="stats-card" id="log-stats" aria-label="System Logs">
-                <div class="section-header">
-                    <h2>System Logs</h2>
-                    <button class="refresh-btn" onclick="window.monitorApp.refreshLogStats()">
-                        Refresh
-                    </button>
-                </div>
-                <div class="card-content">
-                    <div class="log-container">
-                        <div class="log-entries">Loading system logs...</div>
+<body class="h-full bg-gray-50">
+    <!-- Login Modal -->
+    <div id="loginModal"
+        class="fixed inset-0 bg-gray-600 bg-opacity-50 blur-backdrop flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-xl w-96 p-8 fade-in">
+            <div class="text-center mb-8">
+                <i class="fas fa-server text-4xl text-primary-600 mb-4"></i>
+                <h2 class="text-2xl font-bold text-gray-900">System Monitor</h2>
+                <p class="text-gray-500 mt-2">Please sign in to continue</p>
+            </div>
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        <input type="text" name="username" required
+                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
                     </div>
                 </div>
-            </section>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                            <i class="fas fa-lock"></i>
+                        </span>
+                        <input type="password" name="password" required
+                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    </div>
+                </div>
+                <div id="loginError" class="hidden">
+                    <div class="bg-red-50 text-red-800 text-sm rounded-lg p-3">
+                        <span class="flex items-center">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            <span id="loginErrorText"></span>
+                        </span>
+                    </div>
+                </div>
+                <button type="submit"
+                    class="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 transition-colors">
+                    <i class="fas fa-sign-in-alt mr-2"></i>
+                    Sign In
+                </button>
+            </form>
         </div>
-    </main>
+    </div>
 
-    <script src="/static/js/monitor.js"></script>
+    <!-- Main Dashboard -->
+    <div id="mainContent" class="hidden min-h-full">
+        <!-- Header -->
+        <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center">
+                        <i class="fas fa-server text-primary-600 text-2xl mr-3"></i>
+                        <h1 class="text-xl font-semibold text-gray-900">System Monitor</h1>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center text-sm text-gray-500">
+                            <i class="fas fa-clock mr-2"></i>
+                            <span id="systemUptime"></span>
+                        </div>
+                        <button id="logoutBtn"
+                            class="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 transition-colors">
+                            <i class="fas fa-sign-out-alt mr-2"></i>
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <!-- System Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <!-- CPU Usage -->
+                <div class="grid-card p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">CPU Usage</h3>
+                        <i class="fas fa-microchip text-primary-600"></i>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="cpuChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-center">
+                        <span id="cpuValue" class="text-2xl font-bold text-primary-600">0%</span>
+                        <p class="text-sm text-gray-500 mt-1">Current Usage</p>
+                    </div>
+                </div>
+
+                <!-- Memory Usage -->
+                <div class="grid-card p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Memory Usage</h3>
+                        <i class="fas fa-memory text-primary-600"></i>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="memoryChart"></canvas>
+                    </div>
+                    <div class="mt-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center">
+                                <span id="memoryUsed" class="block text-lg font-semibold text-primary-600">0 GB</span>
+                                <span class="text-sm text-gray-500">Used</span>
+                            </div>
+                            <div class="text-center">
+                                <span id="memoryTotal" class="block text-lg font-semibold text-gray-600">0 GB</span>
+                                <span class="text-sm text-gray-500">Total</span>
+                            </div>
+                        </div>
+                        <div class="text-center mt-2">
+                            <span id="memoryPercentage" class="text-sm font-medium text-gray-900">0%</span>
+                            <span class="text-sm text-gray-500"> utilization</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Disk Usage -->
+                <div class="grid-card p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Disk Usage</h3>
+                        <i class="fas fa-hdd text-primary-600"></i>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="diskChart"></canvas>
+                    </div>
+                    <div class="mt-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="text-center">
+                                <span id="diskUsed" class="block text-lg font-semibold text-primary-600">0 GB</span>
+                                <span class="text-sm text-gray-500">Used</span>
+                            </div>
+                            <div class="text-center">
+                                <span id="diskFree" class="block text-lg font-semibold text-green-600">0 GB</span>
+                                <span class="text-sm text-gray-500">Free</span>
+                            </div>
+                        </div>
+                        <div class="text-center mt-2">
+                            <span id="diskPercentage" class="text-sm font-medium text-gray-900">0%</span>
+                            <span class="text-sm text-gray-500"> used of </span>
+                            <span id="diskTotal" class="text-sm font-medium text-gray-900">0 GB</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Load -->
+                <div class="grid-card p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">System Load</h3>
+                        <i class="fas fa-tachometer-alt text-primary-600"></i>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="loadChart"></canvas>
+                    </div>
+                    <div class="mt-4">
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                                <span id="load1" class="block text-lg font-semibold text-primary-600">0.00</span>
+                                <span class="text-sm text-gray-500">1 min</span>
+                            </div>
+                            <div>
+                                <span id="load5" class="block text-lg font-semibold text-primary-600">0.00</span>
+                                <span class="text-sm text-gray-500">5 min</span>
+                            </div>
+                            <div>
+                                <span id="load15" class="block text-lg font-semibold text-primary-600">0.00</span>
+                                <span class="text-sm text-gray-500">15 min</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Process Management -->
+            <div class="grid-card mb-6">
+                <div class="p-4 border-b border-gray-100">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-900">Process Management</h2>
+                            <p class="text-sm text-gray-500 mt-1" id="processSummary"></p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-2">
+                                <select id="processSortSelect"
+                                    class="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5">
+                                    <option value="cpu">Sort by CPU Usage</option>
+                                    <option value="memory">Sort by Memory Usage</option>
+                                    <option value="pid">Sort by PID</option>
+                                    <option value="status">Sort by Status</option>
+                                </select>
+                                <button id="sortOrderBtn"
+                                    class="flex items-center justify-center p-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-primary-500">
+                                    <i class="fas fa-sort-amount-down text-gray-600"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar" style="max-height: 400px;">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="table-header">
+                                    <div class="flex items-center space-x-1">
+                                        <span>PID</span>
+                                    </div>
+                                </th>
+                                <th class="table-header">Name</th>
+                                <th class="table-header">
+                                    <div class="flex items-center space-x-1">
+                                        <span>CPU %</span>
+                                    </div>
+                                </th>
+                                <th class="table-header">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Memory %</span>
+                                    </div>
+                                </th>
+                                <th class="table-header">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Status</span>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="processTableBody" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Two Column Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Left Column -->
+                <div class="space-y-6">
+                    <!-- Current Users with Usage Information -->
+                    <div class="grid-card">
+                        <div class="p-4 border-b border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-lg font-semibold text-gray-900">Current Users</h2>
+                                <i class="fas fa-users text-primary-600"></i>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto custom-scrollbar" style="max-height: 300px;">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th class="table-header">Username</th>
+                                        <th class="table-header">Terminal</th>
+                                        <th class="table-header">Host</th>
+                                        <th class="table-header">Started</th>
+                                        <th class="table-header">CPU %</th>
+                                        <th class="table-header">Memory %</th>
+                                        <th class="table-header">Processes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="currentUsersTableBody" class="bg-white divide-y divide-gray-200">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Last Logins -->
+                    <div class="grid-card">
+                        <div class="p-4 border-b border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-lg font-semibold text-gray-900">Last 10 Logins</h2>
+                                <i class="fas fa-history text-primary-600"></i>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto custom-scrollbar" style="max-height: 300px;">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th class="table-header">Username</th>
+                                        <th class="table-header">Terminal</th>
+                                        <th class="table-header">Host</th>
+                                        <th class="table-header">Login Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lastLoginsTableBody" class="bg-white divide-y divide-gray-200">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="space-y-6">
+                    <!-- System Logs -->
+                    <div class="grid-card">
+                        <div class="p-4 border-b border-gray-100">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h2 class="text-lg font-semibold text-gray-900">System Logs</h2>
+                                    <p class="text-sm text-gray-500 mt-1">Real-time monitoring of last 50 system log
+                                        entries</p>
+                                </div>
+                                <i class="fas fa-terminal text-primary-600"></i>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <div class="bg-gray-900 rounded-lg overflow-hidden">
+                                <div class="flex items-center justify-between px-4 py-2 bg-gray-800">
+                                    <div class="flex space-x-2">
+                                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                    </div>
+                                    <span class="text-xs text-gray-400">system.log</span>
+                                </div>
+                                <pre id="systemLogs"
+                                    class="text-sm text-gray-300 font-mono p-4 overflow-auto custom-scrollbar whitespace-pre-wrap break-all"
+                                    style="max-height: 800px; background-color: #1a1a1a;">Loading logs...</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Global Variables
+        let ws = null;
+        const chartConfigs = new Map();
+        let sortConfig = {
+            field: 'cpu',
+            order: 'desc'
+        };
+
+        // Add styles for sort icons
+        const style = document.createElement('style');
+        style.textContent = `
+            .sort-icons {
+                display: inline-flex;
+                flex-direction: column;
+                opacity: 0.5;
+            }
+            .group:hover .sort-icons {
+                opacity: 1;
+            }
+            .sort-active {
+                color: #0ea5e9 !important;
+                opacity: 1 !important;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Function to update sort icons
+        const updateSortIcons = () => {
+            // Reset all icons
+            document.querySelectorAll('th[data-sort] .sort-icons i').forEach(icon => {
+                icon.className = 'fas fa-sort text-gray-400 group-hover:text-gray-600';
+            });
+
+            // Update active sort column icon
+            const activeHeader = document.querySelector(`th[data-sort="${sortConfig.field}"] .sort-icons i`);
+            if (activeHeader) {
+                activeHeader.className = `fas fa-sort-${sortConfig.order === 'asc' ? 'up' : 'down'} sort-active`;
+            }
+        };
+
+        // Add click handlers to sortable headers
+        document.querySelectorAll('th[data-sort]').forEach(header => {
+            header.addEventListener('click', () => {
+                const field = header.dataset.sort;
+                if (sortConfig.field === field) {
+                    // Toggle order if clicking the same header
+                    sortConfig.order = sortConfig.order === 'asc' ? 'desc' : 'asc';
+                } else {
+                    // Set new field and default to descending order
+                    sortConfig.field = field;
+                    sortConfig.order = 'desc';
+                }
+                updateSortIcons();
+            });
+        });
+
+        // Chart Configuration
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            animation: {
+                duration: 300
+            }
+        };
+
+        // Initialize charts
+        const initializeCharts = () => {
+            // CPU Usage Chart
+            const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+            chartConfigs.set('cpu', {
+                chart: new Chart(cpuCtx, {
+                    type: 'line',
+                    data: {
+                        labels: Array(10).fill(''),
+                        datasets: [{
+                            data: Array(10).fill(0),
+                            borderColor: '#0ea5e9',
+                            backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                grid: {
+                                    display: true,
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                }),
+                data: Array(10).fill(0)
+            });
+
+            // Memory Usage Chart
+            const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+            chartConfigs.set('memory', {
+                chart: new Chart(memoryCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Used', 'Free'],
+                        datasets: [{
+                            data: [0, 100],
+                            backgroundColor: ['#0ea5e9', '#e2e8f0'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        cutout: '75%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 20
+                                }
+                            }
+                        }
+                    }
+                })
+            });
+
+            // Disk Usage Chart
+            const diskCtx = document.getElementById('diskChart').getContext('2d');
+            chartConfigs.set('disk', {
+                chart: new Chart(diskCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Used', 'Free'],
+                        datasets: [{
+                            data: [0, 100],
+                            backgroundColor: ['#0ea5e9', '#e2e8f0'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        cutout: '75%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 20
+                                }
+                            }
+                        }
+                    }
+                })
+            });
+
+            // Load Average Chart
+            const loadCtx = document.getElementById('loadChart').getContext('2d');
+            chartConfigs.set('load', {
+                chart: new Chart(loadCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['1min', '5min', '15min'],
+                        datasets: [{
+                            data: [0, 0, 0],
+                            backgroundColor: [
+                                'rgba(14, 165, 233, 0.7)',
+                                'rgba(14, 165, 233, 0.5)',
+                                'rgba(14, 165, 233, 0.3)'
+                            ],
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                })
+            });
+        };
+
+        // Format Numbers and Data
+        const formatBytes = (bytes, decimals = 2) => {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        };
+
+        const formatNumber = (num) => {
+            return new Intl.NumberFormat().format(num);
+        };
+
+        // WebSocket Connection Management
+        const initWebSocket = () => {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${location.host}${location.pathname.replace('monitor', 'ws')}`;
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+
+                switch (message.type) {
+                    case 'auth':
+                        handleAuthResponse(message);
+                        break;
+                    case 'stats':
+                        updateDashboard(message.data);
+                        break;
+                    case 'error':
+                        handleError(message);
+                        break;
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                // Show login form on disconnect
+                document.getElementById('mainContent').classList.add('hidden');
+                document.getElementById('loginModal').classList.remove('hidden');
+                setTimeout(initWebSocket, 5000);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        };
+
+        const handleAuthResponse = (message) => {
+            if (message.status === 'success') {
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+                document.getElementById('loginError').classList.add('hidden');
+
+                // Start requesting stats after successful auth
+                setInterval(() => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ command: 'stats' }));
+                    }
+                }, 1000);
+            } else {
+                const errorDiv = document.getElementById('loginError');
+                const errorText = document.getElementById('loginErrorText');
+                errorText.textContent = message.message || 'Authentication failed';
+                errorDiv.classList.remove('hidden');
+            }
+        };
+
+        const handleError = (message) => {
+            console.error('Error:', message.message);
+            if (message.message === 'Not authenticated') {
+                document.getElementById('mainContent').classList.add('hidden');
+                document.getElementById('loginModal').classList.remove('hidden');
+            }
+        };
+
+        const handleLogin = async (event) => {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    command: 'login',
+                    username: formData.get('username'),
+                    password: formData.get('password')
+                }));
+            } else {
+                const errorDiv = document.getElementById('loginError');
+                const errorText = document.getElementById('loginErrorText');
+                errorText.textContent = 'Connection error. Please try again.';
+                errorDiv.classList.remove('hidden');
+            }
+        };
+
+        // Dashboard Updates
+        const updateDashboard = (stats) => {
+            updateCharts(stats);
+            updateProcessTable(stats.processes);
+            updateCurrentUsers(stats.current_users);
+            updateLastLogins(stats.last_logins);
+            updateSystemInfo(stats);
+            updateSystemLogs(stats.system_logs);
+        };
+
+        const updateCharts = (stats) => {
+            // Update CPU Chart
+            const cpuConfig = chartConfigs.get('cpu');
+            cpuConfig.data.push(stats.cpu);
+            cpuConfig.data = cpuConfig.data.slice(-10);
+            cpuConfig.chart.data.datasets[0].data = cpuConfig.data;
+            cpuConfig.chart.update('quiet');
+            document.getElementById('cpuValue').textContent = `${stats.cpu.toFixed(1)}%`;
+
+            // Update Memory Chart
+            const memoryChart = chartConfigs.get('memory').chart;
+            const usedMemory = stats.memory.used / (1024 * 1024 * 1024);
+            const totalMemory = stats.memory.total / (1024 * 1024 * 1024);
+            const freeMemory = totalMemory - usedMemory;
+            memoryChart.data.datasets[0].data = [usedMemory, freeMemory];
+            memoryChart.update('quiet');
+
+            document.getElementById('memoryUsed').textContent = `${usedMemory.toFixed(1)} GB`;
+            document.getElementById('memoryTotal').textContent = `${totalMemory.toFixed(1)} GB`;
+            document.getElementById('memoryPercentage').textContent = `${stats.memory.percent.toFixed(1)}%`;
+
+            // Update Disk Chart
+            const diskChart = chartConfigs.get('disk').chart;
+            const usedDisk = stats.disk.used / (1024 * 1024 * 1024);
+            const freeDisk = stats.disk.free / (1024 * 1024 * 1024);
+            const totalDisk = stats.disk.total / (1024 * 1024 * 1024);
+            diskChart.data.datasets[0].data = [usedDisk, freeDisk];
+            diskChart.update('quiet');
+
+            document.getElementById('diskUsed').textContent = `${usedDisk.toFixed(1)} GB`;
+            document.getElementById('diskFree').textContent = `${freeDisk.toFixed(1)} GB`;
+            document.getElementById('diskTotal').textContent = `${totalDisk.toFixed(1)} GB`;
+            document.getElementById('diskPercentage').textContent = `${stats.disk.percent.toFixed(1)}%`;
+
+            // Update Load Chart
+            const loadChart = chartConfigs.get('load').chart;
+            loadChart.data.datasets[0].data = stats.load_avg;
+            loadChart.update('quiet');
+
+            document.getElementById('load1').textContent = stats.load_avg[0].toFixed(2);
+            document.getElementById('load5').textContent = stats.load_avg[1].toFixed(2);
+            document.getElementById('load15').textContent = stats.load_avg[2].toFixed(2);
+        };
+
+        const getStatusClass = (status) => {
+            const statusKey = status.toLowerCase().replace(/\s+/g, '-');
+            return `status-badge ${statusKey}`;
+        };
+
+        const updateProcessTable = (processes) => {
+            const tbody = document.getElementById('processTableBody');
+
+            const sortedProcesses = [...processes].sort((a, b) => {
+                let compareValue = 0;
+
+                switch (sortConfig.field) {
+                    case 'cpu':
+                        compareValue = (b.cpu_percent || 0) - (a.cpu_percent || 0);
+                        break;
+                    case 'memory':
+                        compareValue = (b.memory_percent || 0) - (a.memory_percent || 0);
+                        break;
+                    case 'pid':
+                        compareValue = b.pid - a.pid;
+                        break;
+                    case 'status':
+                        compareValue = b.status.localeCompare(a.status);
+                        break;
+                }
+
+                return sortConfig.order === 'desc' ? compareValue : -compareValue;
+            });
+
+            tbody.innerHTML = sortedProcesses.map(process => `
+        <tr class="hover:bg-gray-50 transition-colors">
+            <td class="table-cell font-mono">${process.pid}</td>
+            <td class="table-cell font-medium">${process.name}</td>
+            <td class="table-cell">${process.cpu_percent.toFixed(1)}%</td>
+            <td class="table-cell">${process.memory_percent.toFixed(1)}%</td>
+            <td class="table-cell">
+                <span class="status-badge ${process.status.toLowerCase()}">${process.status}</span>
+            </td>
+        </tr>
+    `).join('');
+        }
+
+        const updateCurrentUsers = (users) => {
+            const tbody = document.getElementById('currentUsersTableBody');
+            tbody.innerHTML = users.map(user => `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="table-cell font-medium">${user.name}</td>
+                <td class="table-cell text-gray-500">${user.terminal}</td>
+                <td class="table-cell text-gray-500">${user.host}</td>
+                <td class="table-cell text-gray-500">${user.started}</td>
+                <td class="table-cell">
+                    <div class="flex items-center">
+                        <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                            <div class="bg-primary-600 rounded-full h-2" 
+                                 style="width: ${user.cpu_usage}%">
+                            </div>
+                        </div>
+                        <span>${user.cpu_usage.toFixed(1)}%</span>
+                    </div>
+                </td>
+                <td class="table-cell">
+                    <div class="flex items-center">
+                        <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                            <div class="bg-primary-600 rounded-full h-2" 
+                                 style="width: ${user.memory_usage}%">
+                            </div>
+                        </div>
+                        <span>${user.memory_usage.toFixed(1)}%</span>
+                    </div>
+                </td>
+                <td class="table-cell">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                        ${user.process_count} processes
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+        };
+
+        const updateLastLogins = (logins) => {
+            const tbody = document.getElementById('lastLoginsTableBody');
+            tbody.innerHTML = logins.map(login => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="table-cell font-medium">${login.name}</td>
+                    <td class="table-cell text-gray-500">${login.terminal}</td>
+                    <td class="table-cell text-gray-500">${login.host}</td>
+                    <td class="table-cell text-gray-500">${login.login_time}</td>
+                </tr>
+            `).join('');
+        };
+
+        const updateSystemInfo = (stats) => {
+            document.getElementById('systemUptime').textContent = stats.uptime;
+            const summary = stats.process_summary;
+            document.getElementById('processSummary').innerHTML = `
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center">
+                        <i class="fas fa-microchip text-primary-600 mr-2"></i>
+                        <span class="font-medium">${formatNumber(summary.total)} Total Processes</span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center bg-green-50 rounded-full px-3 py-1">
+                            <span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+                            <span class="text-green-700 text-sm">${summary.running} Running</span>
+                        </div>
+                        <div class="flex items-center bg-blue-50 rounded-full px-3 py-1">
+                            <span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+                            <span class="text-blue-700 text-sm">${summary.sleeping} Sleeping</span>
+                        </div>
+                        <div class="flex items-center bg-slate-50 rounded-full px-3 py-1">
+                            <span class="w-2 h-2 rounded-full bg-slate-500 mr-2"></span>
+                            <span class="text-slate-700 text-sm">${summary.idle} Idle</span>
+                        </div>
+                        <div class="flex items-center bg-yellow-50 rounded-full px-3 py-1">
+                            <span class="w-2 h-2 rounded-full bg-yellow-500 mr-2"></span>
+                            <span class="text-yellow-700 text-sm">${summary.stopped} Stopped</span>
+                        </div>
+                        <div class="flex items-center bg-red-50 rounded-full px-3 py-1">
+                            <span class="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
+                            <span class="text-red-700 text-sm">${summary.zombie} Zombie</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const updateSystemLogs = (logs) => {
+            const formattedLogs = logs
+                .map(log => log.trim())
+                .filter(log => log.length > 0)
+                .join('\n\n');
+            document.getElementById('systemLogs').textContent = formattedLogs;
+        };
+        const checkSession = async () => {
+            try {
+                const response = await fetch('/check-session');
+                if (response.ok) {
+                    // Session is valid, show main content
+                    document.getElementById('loginModal').classList.add('hidden');
+                    document.getElementById('mainContent').classList.remove('hidden');
+                    initWebSocket();
+                } else {
+                    // No valid session, show login form
+                    document.getElementById('loginModal').classList.remove('hidden');
+                    document.getElementById('mainContent').classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Session check failed:', error);
+                // Show login form on error
+                document.getElementById('loginModal').classList.remove('hidden');
+                document.getElementById('mainContent').classList.add('hidden');
+            }
+        };
+
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeCharts();
+            initWebSocket();
+
+            // Add form submit handler
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+
+            // Update logout to just refresh the page
+            document.getElementById('logoutBtn').addEventListener('click', () => {
+                window.location.reload();
+            });
+
+            // Update only the process sorting handlers
+            document.getElementById('processSortSelect').addEventListener('change', (event) => {
+                sortConfig.field = event.target.value;
+                // Request immediate update
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send('stats');
+                }
+            });
+
+            document.getElementById('sortOrderBtn').addEventListener('click', () => {
+                sortConfig.order = sortConfig.order === 'desc' ? 'asc' : 'desc';
+                const icon = document.querySelector('#sortOrderBtn i');
+                icon.className = sortConfig.order === 'desc' ?
+                    'fas fa-sort-amount-down text-gray-600' :
+                    'fas fa-sort-amount-up text-gray-600';
+                // Request immediate update
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send('stats');
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>
